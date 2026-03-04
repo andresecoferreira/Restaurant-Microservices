@@ -1,26 +1,26 @@
 # 🍽️ Restaurant Microservices
 
-Sistema de gestão de restaurantes baseado em arquitetura de **microserviços**, desenvolvido como projeto final da cadeira de **Computação Distribuída** — Universidade Lusófona.
+A restaurant management system built on a **microservices** architecture, developed as the final project for the **Distributed Computing** course — Universidade Lusófona.
 
 
 ---
 
-## 📋 Índice
+## 📋 Table of Contents
 
-- [Arquitetura](#-arquitetura)
-- [Serviços](#-serviços)
-- [Tecnologias](#-tecnologias)
-- [Comunicação entre Serviços](#-comunicação-entre-serviços)
-- [Pré-requisitos](#-pré-requisitos)
-- [Como Executar](#-como-executar)
+- [Architecture](#-architecture)
+- [Services](#-services)
+- [Technologies](#-technologies)
+- [Inter-Service Communication](#-inter-service-communication)
+- [Prerequisites](#-prerequisites)
+- [How to Run](#-how-to-run)
 - [API Endpoints](#-api-endpoints)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
+- [Project Structure](#-project-structure)
 
 ---
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
-O sistema segue uma arquitetura de microserviços com 4 serviços independentes, cada um com a sua própria base de dados PostgreSQL. A comunicação assíncrona entre serviços é feita via **Apache Kafka** e a comunicação síncrona via **OpenFeign (REST)**.
+The system follows a microservices architecture with 4 independent services, each with its own PostgreSQL database. Asynchronous communication between services is handled via **Apache Kafka** and synchronous communication via **OpenFeign (REST)**.
 
 ```
 ┌─────────────────┐     REST (Feign)     ┌─────────────────────┐
@@ -39,104 +39,104 @@ O sistema segue uma arquitetura de microserviços com 4 serviços independentes,
 
 ---
 
-## 📦 Serviços
+## 📦 Services
 
 ### 1. Restaurant Service (`:8081`)
-Gestão de restaurantes, menus e slots de disponibilidade (time slots).
+Manages restaurants, menus, and availability time slots.
 
-- CRUD de restaurantes
-- CRUD de itens de menu
-- Gestão de slots de disponibilidade (criar, reservar, libertar)
-- Migrações de base de dados com **Flyway**
+- Restaurant CRUD operations
+- Menu item CRUD operations
+- Availability slot management (create, book, release)
+- Database migrations with **Flyway**
 
 ### 2. Reservation Service (`:8082`)
-Gestão de reservas com comunicação síncrona ao Restaurant Service e publicação de eventos via Kafka.
+Manages reservations with synchronous communication to the Restaurant Service and event publishing via Kafka.
 
-- Criar, confirmar, cancelar e eliminar reservas
-- Comunicação com o Restaurant Service via **OpenFeign** para verificar/reservar slots
-- Publicação de eventos Kafka: `reservation.created`, `reservation.confirmed`, `reservation.cancelled`
-- Envelope de mensagens com `traceId` para rastreabilidade
+- Create, confirm, cancel, and delete reservations
+- Communicates with the Restaurant Service via **OpenFeign** to verify/book slots
+- Publishes Kafka events: `reservation.created`, `reservation.confirmed`, `reservation.cancelled`
+- Message envelope with `traceId` for traceability
 
 ### 3. Notification Service (`:8083`)
-Consumidor Kafka que processa eventos de reserva e gera notificações.
+Kafka consumer that processes reservation events and generates notifications.
 
-- Escuta tópicos: `reservation.created`, `reservation.confirmed`, `reservation.cancelled`
-- Persiste notificações na base de dados
-- Publica evento `restaurant.notified` após processamento
+- Listens to topics: `reservation.created`, `reservation.confirmed`, `reservation.cancelled`
+- Persists notifications in the database
+- Publishes `restaurant.notified` event after processing
 
 ### 4. Analytics Service (`:8084`)
-Serviço de Business Intelligence que consome eventos Kafka para gerar estatísticas e dashboards.
+Business Intelligence service that consumes Kafka events to generate statistics and dashboards.
 
-- Restaurantes mais populares (por reservas confirmadas)
-- Clientes VIP (por total de reservas)
-- Ocupação por data (total de hóspedes, reservas, tamanho médio)
-- Distribuição de estados de reserva (PENDING, CONFIRMED, CANCELLED)
-- Dashboard web estático (`index.html`)
+- Most popular restaurants (by confirmed reservations)
+- VIP customers (by total bookings)
+- Occupancy by date (total guests, reservations, average party size)
+- Reservation status distribution (PENDING, CONFIRMED, CANCELLED)
+- Static web dashboard (`index.html`)
 
 ---
 
-## 🛠️ Tecnologias
+## 🛠️ Technologies
 
-| Tecnologia | Versão | Utilização |
+| Technology | Version | Usage |
 |---|---|---|
-| **Java** | 24 | Linguagem principal |
-| **Spring Boot** | 3.4.4 | Framework backend |
-| **Spring Cloud OpenFeign** | 2024.0.0 | Comunicação REST entre serviços |
-| **Spring gRPC** | 0.12.0 | Comunicação gRPC |
-| **Apache Kafka** | 7.5.0 (Confluent) | Mensageria assíncrona |
-| **PostgreSQL** | 17 | Base de dados relacional |
-| **Flyway** | 11.12 | Migrações de base de dados |
-| **Docker / Docker Compose** | - | Containerização |
-| **Swagger / OpenAPI** | - | Documentação da API |
-| **Maven** | 3.9.9 | Gestão de dependências |
-| **Lombok** | - | Redução de boilerplate |
+| **Java** | 24 | Main language |
+| **Spring Boot** | 3.4.4 | Backend framework |
+| **Spring Cloud OpenFeign** | 2024.0.0 | REST communication between services |
+| **Spring gRPC** | 0.12.0 | gRPC communication |
+| **Apache Kafka** | 7.5.0 (Confluent) | Asynchronous messaging |
+| **PostgreSQL** | 17 | Relational database |
+| **Flyway** | 11.12 | Database migrations |
+| **Docker / Docker Compose** | - | Containerization |
+| **Swagger / OpenAPI** | - | API documentation |
+| **Maven** | 3.9.9 | Dependency management |
+| **Lombok** | - | Boilerplate reduction |
 
 ---
 
-## 🔗 Comunicação entre Serviços
+## 🔗 Inter-Service Communication
 
-### Síncrona (REST via OpenFeign)
-- **Reservation → Restaurant**: Verificação de disponibilidade, reserva e libertação de slots.
+### Synchronous (REST via OpenFeign)
+- **Reservation → Restaurant**: Availability check, slot booking, and slot release.
 
-### Assíncrona (Apache Kafka)
+### Asynchronous (Apache Kafka)
 
-| Tópico | Produtor | Consumidores |
+| Topic | Producer | Consumers |
 |---|---|---|
 | `reservation.created` | Reservation Service | Notification Service, Analytics Service |
 | `reservation.confirmed` | Reservation Service | Notification Service, Analytics Service |
 | `reservation.cancelled` | Reservation Service | Notification Service, Analytics Service |
 | `restaurant.notified` | Notification Service | (Audit log) |
 
-Todas as mensagens utilizam um **MessageEnvelope** com:
-- `eventType` — tipo do evento
-- `status` — estado da reserva
-- `traceId` — ID de rastreabilidade (UUID)
-- `occurredAt` — timestamp do evento
-- `payload` — dados do evento
+All messages use a **MessageEnvelope** with:
+- `eventType` — event type
+- `status` — reservation status
+- `traceId` — traceability ID (UUID)
+- `occurredAt` — event timestamp
+- `payload` — event data
 
 ---
 
-## ⚙️ Pré-requisitos
+## ⚙️ Prerequisites
 
 - [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
-- [Java 24](https://jdk.java.net/24/) (para desenvolvimento local)
-- [Maven 3.9+](https://maven.apache.org/) (para desenvolvimento local)
+- [Java 24](https://jdk.java.net/24/) (for local development)
+- [Maven 3.9+](https://maven.apache.org/) (for local development)
 
 ---
 
-## 🚀 Como Executar
+## 🚀 How to Run
 
-### 1. Criar a rede Docker partilhada
+### 1. Create the shared Docker network
 
 ```bash
 docker network create shared-backend-network
 ```
 
-### 2. Iniciar os serviços (por ordem)
+### 2. Start the services (in order)
 
-Cada serviço tem o seu próprio `compose.yml`. Requer um ficheiro `.env` em cada pasta de serviço com as variáveis de ambiente necessárias.
+Each service has its own `compose.yml`. A `.env` file is required in each service folder with the necessary environment variables.
 
-**Exemplo de `.env`:**
+**Example `.env`:**
 ```env
 PORT=8081
 APPLICATION_NAME=restaurant-service
@@ -145,14 +145,14 @@ POSTGRES_USER=project_user
 POSTGRES_PASSWORD=project_secure_password_2024
 ```
 
-**Iniciar o Reservation Service primeiro** (inclui Kafka e Zookeeper):
+**Start the Reservation Service first** (includes Kafka and Zookeeper):
 
 ```bash
 cd reservation
 docker compose up -d
 ```
 
-**Depois iniciar os restantes serviços:**
+**Then start the remaining services:**
 
 ```bash
 cd ../restaurant
@@ -165,7 +165,7 @@ cd ../analytics
 docker compose up -d
 ```
 
-### 3. Verificar que os serviços estão a correr
+### 3. Verify the services are running
 
 - Restaurant Service: http://localhost:8081/actuator/health
 - Reservation Service: http://localhost:8082/actuator/health
@@ -179,51 +179,51 @@ docker compose up -d
 
 ### Restaurant Service (`:8081`)
 
-| Método | Endpoint | Descrição |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/restaurants` | Criar restaurante |
-| `GET` | `/api/restaurants` | Listar todos os restaurantes |
-| `GET` | `/api/restaurants/{id}` | Obter restaurante por ID |
-| `PUT` | `/api/restaurants/{id}` | Atualizar restaurante |
-| `DELETE` | `/api/restaurants/{id}` | Eliminar restaurante |
-| `POST` | `/api/restaurants/{id}/slots` | Criar slot de disponibilidade |
-| `GET` | `/api/restaurants/{id}/slots` | Listar slots de um restaurante |
-| `GET` | `/api/slots/{id}` | Obter slot por ID |
-| `POST` | `/api/menu/items/{restaurantId}` | Criar item de menu |
-| `GET` | `/api/menu/items/{id}` | Obter item de menu |
-| `GET` | `/api/menu/restaurants/{restaurantId}` | Listar menu de um restaurante |
-| `PUT` | `/api/menu/items/{id}` | Atualizar item de menu |
-| `DELETE` | `/api/menu/items/{id}` | Eliminar item de menu |
+| `POST` | `/api/restaurants` | Create restaurant |
+| `GET` | `/api/restaurants` | List all restaurants |
+| `GET` | `/api/restaurants/{id}` | Get restaurant by ID |
+| `PUT` | `/api/restaurants/{id}` | Update restaurant |
+| `DELETE` | `/api/restaurants/{id}` | Delete restaurant |
+| `POST` | `/api/restaurants/{id}/slots` | Create availability slot |
+| `GET` | `/api/restaurants/{id}/slots` | List slots for a restaurant |
+| `GET` | `/api/slots/{id}` | Get slot by ID |
+| `POST` | `/api/menu/items/{restaurantId}` | Create menu item |
+| `GET` | `/api/menu/items/{id}` | Get menu item |
+| `GET` | `/api/menu/restaurants/{restaurantId}` | List menu for a restaurant |
+| `PUT` | `/api/menu/items/{id}` | Update menu item |
+| `DELETE` | `/api/menu/items/{id}` | Delete menu item |
 
 ### Reservation Service (`:8082`)
 
-| Método | Endpoint | Descrição |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/reservations` | Criar reserva |
-| `GET` | `/api/reservations` | Listar todas as reservas |
-| `GET` | `/api/reservations/{id}` | Obter reserva por ID |
-| `POST` | `/api/reservations/{id}/confirm` | Confirmar reserva |
-| `POST` | `/api/reservations/{id}/cancel` | Cancelar reserva |
-| `DELETE` | `/api/reservations/{id}` | Eliminar reserva |
+| `POST` | `/api/reservations` | Create reservation |
+| `GET` | `/api/reservations` | List all reservations |
+| `GET` | `/api/reservations/{id}` | Get reservation by ID |
+| `POST` | `/api/reservations/{id}/confirm` | Confirm reservation |
+| `POST` | `/api/reservations/{id}/cancel` | Cancel reservation |
+| `DELETE` | `/api/reservations/{id}` | Delete reservation |
 
 ### Analytics Service (`:8084`)
 
-| Método | Endpoint | Descrição |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/analytics/popular-restaurants` | Restaurantes mais populares |
-| `GET` | `/api/analytics/vip-customers` | Clientes VIP |
-| `GET` | `/api/analytics/occupancy-by-date` | Ocupação por data |
-| `GET` | `/api/analytics/status-distribution` | Distribuição de estados |
+| `GET` | `/api/analytics/popular-restaurants` | Most popular restaurants |
+| `GET` | `/api/analytics/vip-customers` | VIP customers |
+| `GET` | `/api/analytics/occupancy-by-date` | Occupancy by date |
+| `GET` | `/api/analytics/status-distribution` | Status distribution |
 
-### Documentação Swagger
+### Swagger Documentation
 
-Cada serviço disponibiliza documentação interativa:
+Each service provides interactive documentation:
 - Swagger UI: `http://localhost:{port}/swagger-ui.html`
 - API Docs (JSON): `http://localhost:{port}/api-docs`
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 Restaurant Microservices/
@@ -241,7 +241,7 @@ Restaurant Microservices/
 │       └── service/               # Business Logic
 │
 ├── reservation/                   # Reservation Service (:8082)
-│   ├── compose.yml                # Inclui Kafka, Zookeeper e Kafka UI
+│   ├── compose.yml                # Includes Kafka, Zookeeper & Kafka UI
 │   ├── Dockerfile
 │   ├── pom.xml
 │   ├── migrations/
@@ -288,8 +288,7 @@ Restaurant Microservices/
 
 ---
 
-## 📊 Monitorização
+## 📊 Monitoring
 
-- **Spring Actuator** — Endpoints de health, info e metrics disponíveis em `/actuator/health`
-- **Kafka UI** — Interface web para monitorizar tópicos e mensagens Kafka em http://localhost:8080
-
+- **Spring Actuator** — Health, info, and metrics endpoints available at `/actuator/health`
+- **Kafka UI** — Web interface for monitoring Kafka topics and messages at http://localhost:8080
