@@ -2,7 +2,6 @@
 
 Sistema de gestão de restaurantes baseado em arquitetura de **microserviços**, desenvolvido como projeto final da cadeira de **Computação Distribuída** — Universidade Lusófona.
 
-**Alunos:** a22304646, a22308720
 
 ---
 
