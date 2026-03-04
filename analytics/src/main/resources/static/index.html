@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin: 0;
+        }
+
+        .header-info {
+            text-align: right;
+        }
+
+        .last-updated {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+        }
+
+        .vip-customers-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .customer-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .customer-item {
+            padding: 15px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .customer-item:hover {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .customer-rank {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .customer-item:hover .customer-rank {
+            background: white;
+            color: #667eea;
+        }
+
+        .customer-info {
+            flex: 1;
+        }
+
+        .customer-email {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .customer-item:hover .customer-email {
+            color: white;
+        }
+
+        .customer-bookings {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .customer-item:hover .customer-bookings {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .bookings-badge {
+            background: #f59e0b;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+
+        .customer-item:hover .bookings-badge {
+            background: white;
+            color: #f59e0b;
+        }
+
+        .occupancy-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .occupancy-list {
+            list-style: none;
+            margin-top: 10px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .occupancy-item {
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95em;
+        }
+
+        .occupancy-date {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .occupancy-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85em;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.75em;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #999;
+            font-size: 1.1em;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #c33;
+            margin-bottom: 20px;
+        }
+
+        .refresh-info {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-info {
+                text-align: left;
+                margin-top: 15px;
+            }
+
+            header h1 {
+                font-size: 2em;
+            }
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 1.1em;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>📊 Restaurant Analytics Dashboard</h1>
+            </div>
+            <div class="header-info">
+                <div class="status-badge">
+                    <span class="loading-spinner"></span>Live
+                </div>
+                <div class="last-updated">Last updated: <span id="updateTime">--:--:--</span></div>
+            </div>
+        </header>
+
+        <div id="error-container"></div>
+
+        <div class="dashboard-grid">
+            <!-- Top Restaurants Chart -->
+            <div class="card">
+                <h2>🏆 Top 5 Popular Restaurants</h2>
+                <div class="chart-container">
+                    <div id="restaurantsLoading" class="loading">
+                        <div class="loading-spinner"></div> Loading...
+                    </div>
+                    <canvas id="restaurantsChart" style="display: none;"></canvas>
+                </div>
+                <div class="refresh-info">Ranked by confirmed reservations</div>
+            </div>
+
+            <!-- VIP Customers List -->
+            <div class="card">
+                <h2>⭐ VIP Customers</h2>
+                <div class="vip-customers-container">
+                    <div id="vipLoading" class="loading">
+                        <div class="loading-spinner"></div> Loading...
+                    </div>
+                    <ul id="vipList" class="customer-list" style="display: none;"></ul>
+                </div>
+                <div class="refresh-info">Most loyal customers by booking count</div>
+            </div>
+
+            <!-- Status Distribution Chart -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2>⚖️ Reservation Status Overview</h2>
+                <div class="chart-container">
+                    <div id="statusLoading" class="loading">
+                        <div class="loading-spinner"></div> Loading...
+                    </div>
+                    <canvas id="statusChart" style="display: none;"></canvas>
+                </div>
+                <div class="refresh-info">Distribution of reservations by status</div>
+            </div>
+
+            <!-- Occupancy by Date -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h2>📈 Daily Occupancy Statistics</h2>
+                <div class="occupancy-container">
+                    <div id="occupancyLoading" class="loading">
+                        <div class="loading-spinner"></div> Loading...
+                    </div>
+                    <ul id="occupancyList" class="occupancy-list" style="display: none;"></ul>
+                </div>
+                <div class="refresh-info">Total guests and reservations per day</div>
+            </div>
+        </div>
+
+        <footer>
+            <p>🔄 Auto-refreshing every 5 seconds | Restaurant Analytics Service v1.0</p>
+        </footer>
+    </div>
+
+    <script>
+        let restaurantsChart = null;
+        let statusChart = null;
+
+        // Configuration
+        const CONFIG = {
+            REFRESH_INTERVAL: 5000, // 5 seconds
+            API_BASE: '/api/analytics'
+        };
+
+        // Format time for display
+        function formatTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = `
+                <div class="error">
+                    ⚠️ <strong>Error:</strong> ${message}
+                </div>
+            `;
+            setTimeout(() => {
+                errorContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        // Fetch and display popular restaurants
+        async function loadPopularRestaurants() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/popular-restaurants`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayPopularRestaurants(data);
+            } catch (error) {
+                console.error('Error loading restaurants:', error);
+                showError(`Failed to load restaurants: ${error.message}`);
+                document.getElementById('restaurantsLoading').innerHTML =
+                    '<div class="empty-state">Failed to load data</div>';
+            }
+        }
+
+        // Display popular restaurants chart
+        function displayPopularRestaurants(data) {
+            const loading = document.getElementById('restaurantsLoading');
+            const canvas = document.getElementById('restaurantsChart');
+
+            if (!data || data.length === 0) {
+                loading.innerHTML = '<div class="empty-state">No restaurant data available yet</div>';
+                canvas.style.display = 'none';
+                return;
+            }
+
+            // Take top 5
+            const topData = data.slice(0, 5);
+            const labels = topData.map(r => `Restaurant #${r.restaurant_id}`);
+            const values = topData.map(r => r.total_reservations);
+
+            loading.style.display = 'none';
+            canvas.style.display = 'block';
+
+            // Destroy existing chart if it exists
+            if (restaurantsChart) {
+                restaurantsChart.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            restaurantsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Confirmed Reservations',
+                        data: values,
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.7)',
+                            'rgba(118, 75, 162, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(102, 126, 234)',
+                            'rgb(118, 75, 162)',
+                            'rgb(255, 159, 64)',
+                            'rgb(75, 192, 192)',
+                            'rgb(153, 102, 255)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        hoverBackgroundColor: [
+                            'rgba(102, 126, 234, 0.9)',
+                            'rgba(118, 75, 162, 0.9)',
+                            'rgba(255, 159, 64, 0.9)',
+                            'rgba(75, 192, 192, 0.9)',
+                            'rgba(153, 102, 255, 0.9)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 12, weight: 'bold' },
+                                padding: 15,
+                                color: '#333'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#666'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#666'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch and display status distribution
+        async function loadStatusDistribution() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/status-distribution`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayStatusDistribution(data);
+            } catch (error) {
+                console.error('Error loading status distribution:', error);
+                showError(`Failed to load status distribution: ${error.message}`);
+                document.getElementById('statusLoading').innerHTML =
+                    '<div class="empty-state">Failed to load data</div>';
+            }
+        }
+
+        // Display status distribution chart
+        function displayStatusDistribution(data) {
+            const loading = document.getElementById('statusLoading');
+            const canvas = document.getElementById('statusChart');
+
+            if (!data) {
+                loading.innerHTML = '<div class="empty-state">No status data available yet</div>';
+                canvas.style.display = 'none';
+                return;
+            }
+
+            loading.style.display = 'none';
+            canvas.style.display = 'block';
+
+            // Destroy existing chart if it exists
+            if (statusChart) {
+                statusChart.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            statusChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Created (Pending)', 'Confirmed', 'Cancelled'],
+                    datasets: [{
+                        label: 'Number of Reservations',
+                        data: [data.PENDING, data.CONFIRMED, data.CANCELLED],
+                        backgroundColor: [
+                            'rgba(234, 179, 8, 0.7)',      // Yellow for Created
+                            'rgba(34, 197, 94, 0.7)',      // Green for Confirmed
+                            'rgba(239, 68, 68, 0.7)'       // Red for Cancelled
+                        ],
+                        borderColor: [
+                            'rgb(234, 179, 8)',
+                            'rgb(34, 197, 94)',
+                            'rgb(239, 68, 68)'
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        hoverBackgroundColor: [
+                            'rgba(234, 179, 8, 0.9)',
+                            'rgba(34, 197, 94, 0.9)',
+                            'rgba(239, 68, 68, 0.9)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 12, weight: 'bold' },
+                                padding: 15,
+                                color: '#333'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#666'
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#666'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch and display VIP customers
+        async function loadVipCustomers() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/vip-customers`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayVipCustomers(data);
+            } catch (error) {
+                console.error('Error loading VIP customers:', error);
+                showError(`Failed to load VIP customers: ${error.message}`);
+                document.getElementById('vipLoading').innerHTML =
+                    '<div class="empty-state">Failed to load data</div>';
+            }
+        }
+
+        // Display VIP customers list
+        function displayVipCustomers(data) {
+            const loading = document.getElementById('vipLoading');
+            const list = document.getElementById('vipList');
+
+            if (!data || data.length === 0) {
+                loading.innerHTML = '<div class="empty-state">No customer data available yet</div>';
+                list.style.display = 'none';
+                return;
+            }
+
+            loading.style.display = 'none';
+            list.style.display = 'block';
+            list.innerHTML = '';
+
+            // Take top 10
+            data.slice(0, 10).forEach(customer => {
+                const item = document.createElement('li');
+                item.className = 'customer-item';
+                item.innerHTML = `
+                    <div class="customer-rank">${customer.ranking}</div>
+                    <div class="customer-info">
+                        <div class="customer-email">📧 ${customer.user_email}</div>
+                        <div class="customer-bookings">Total Bookings: ${customer.total_bookings}</div>
+                    </div>
+                    <span class="bookings-badge">${customer.total_bookings} bookings</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Fetch and display occupancy by date
+        async function loadOccupancyByDate() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/occupancy-by-date`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                displayOccupancyByDate(data);
+            } catch (error) {
+                console.error('Error loading occupancy data:', error);
+                showError(`Failed to load occupancy data: ${error.message}`);
+                document.getElementById('occupancyLoading').innerHTML =
+                    '<div class="empty-state">Failed to load data</div>';
+            }
+        }
+
+        // Display occupancy by date list
+        function displayOccupancyByDate(data) {
+            const loading = document.getElementById('occupancyLoading');
+            const list = document.getElementById('occupancyList');
+
+            if (!data || data.length === 0) {
+                loading.innerHTML = '<div class="empty-state">No occupancy data available yet</div>';
+                list.style.display = 'none';
+                return;
+            }
+
+            loading.style.display = 'none';
+            list.style.display = 'block';
+            list.innerHTML = '';
+
+            data.forEach(occupancy => {
+                const item = document.createElement('li');
+                item.className = 'occupancy-item';
+                item.innerHTML = `
+                    <div class="occupancy-date">
+                        📅 ${new Date(occupancy.date).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        })}
+                    </div>
+                    <div class="occupancy-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Guests</span>
+                            <span class="stat-value">${occupancy.total_guests}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Reservations</span>
+                            <span class="stat-value">${occupancy.total_reservations}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Avg Party Size</span>
+                            <span class="stat-value">${occupancy.average_party_size.toFixed(1)}</span>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        // Refresh all data
+        async function refreshDashboard() {
+            document.getElementById('updateTime').textContent = formatTime();
+            await Promise.all([
+                loadPopularRestaurants(),
+                loadStatusDistribution(),
+                loadVipCustomers(),
+                loadOccupancyByDate()
+            ]);
+        }
+
+        // Initialize dashboard
+        function initDashboard() {
+            console.log('🚀 Initializing Restaurant Analytics Dashboard...');
+
+            // Initial load
+            refreshDashboard();
+
+            // Set up auto-refresh
+            setInterval(refreshDashboard, CONFIG.REFRESH_INTERVAL);
+            console.log(`✅ Dashboard initialized | Auto-refresh every ${CONFIG.REFRESH_INTERVAL / 1000}s`);
+        }
+
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

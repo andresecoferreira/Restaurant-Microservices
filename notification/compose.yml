@@ -1,0 +1,54 @@
+services:
+  notification_db:
+    image: postgres:17
+    restart: always
+    env_file: ".env"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared-backend-network
+
+  flyway:
+    image: flyway/flyway:11.12
+    depends_on:
+      notification_db:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/flyway/sql
+    command: >
+      -url=jdbc:postgresql://$POSTGRES_DB:5432/$POSTGRES_DB
+      -user=$POSTGRES_USER
+      -password=$POSTGRES_PASSWORD
+      migrate
+    env_file: ".env"
+    networks:
+      - shared-backend-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      notification_db:
+        condition: service_healthy
+    env_file: ".env"
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./src:/app/src
+      - ~/.m2:/root/.m2
+    networks:
+      - shared-backend-network
+
+volumes:
+  db_data:
+  pgadmin_data:
+
+networks:
+  shared-backend-network:
+    external: true
